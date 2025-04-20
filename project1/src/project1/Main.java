@@ -1,6 +1,4 @@
 package project1;
-//
-//asdfasdfasdfasdfasdf
 
 import javax.swing.*;										// JFrame, JTextPane, JMenuBar ..
 import javax.swing.event.*;  //DocumentEvent, DocumentListener, UndoableEditListener, etc.
@@ -15,17 +13,22 @@ import java.awt.*;   //color
 import java.awt.event.*;  // for KeyEvent, InputEvent, ActionEvent
 import java.io.*;  // File, IOException, BufferedReader/Writer
 import java.awt.Color;
+import java.awt.event.KeyEvent;
+import java.awt.event.InputEvent;
+import java.io.File;
 
 
 // My classes
 import project1.FindReplaceDialog;
-
+import project1.FontDialog;
 
 public class Main {
 	private JFrame frame;
 	private JTextPane textPane;
 	private JFileChooser fileChooser;
 	private File currentFile;
+	
+	private LineNumberView lineNumberView;
 	
 	
 	private static final String[] JAVA_KEYWORDS = {
@@ -55,7 +58,7 @@ public class Main {
 		frame.setSize(800,600);
 		
 		textPane =  new JTextPane();
-		
+		textPane.setEditable(false);
 		
 		// 2) Register the UndoManager on the document
 		textPane.getDocument().addUndoableEditListener(new UndoableEditListener(){
@@ -65,11 +68,11 @@ public class Main {
 			}
 		});
 		
+		
+		lineNumberView = new LineNumberView(textPane);
 		JScrollPane scrollPane = new JScrollPane(textPane);
-		
-		LineNumberView lineNumbers = new LineNumberView(textPane);
-		
-		scrollPane.setRowHeaderView(lineNumbers);
+		scrollPane.setRowHeaderView(lineNumberView);
+
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
 		
@@ -81,6 +84,16 @@ public class Main {
 		JMenuBar menuBar = new JMenuBar();
 		
 		JMenu fileMenu = new JMenu("File");
+		
+		// New
+		JMenuItem newItem = new JMenuItem("New");
+		newItem.setAccelerator(
+				KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK)
+				);
+		newItem.addActionListener(e -> onNew());
+		fileMenu.add(newItem);
+		
+		fileMenu.addSeparator();
 		JMenuItem openItem = new JMenuItem("Open...");
 		openItem.addActionListener(e->onOpen());
 		JMenuItem saveItem = new JMenuItem("Save...");
@@ -126,6 +139,19 @@ public class Main {
 		
 		menuBar.add(fileMenu);
 		menuBar.add(editMenu);
+		
+		JMenu formatMenu = new JMenu("Format");
+		JMenuItem fontItem = new JMenuItem("Font...");
+		fontItem.setAccelerator(
+				KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)
+				);
+		fontItem.addActionListener( e ->
+			new FontDialog(frame, textPane, lineNumberView).setVisible(true)
+		);
+		
+		formatMenu.add(fontItem);
+		menuBar.add(formatMenu);
+		
 		frame.setJMenuBar(menuBar);
 		
 		JMenuItem findReplaceItem = new JMenuItem("Find/Replace...");
@@ -172,11 +198,23 @@ public class Main {
 		});
 		
 		
-		
+		onNew();
 		frame.setVisible(true);
 	}
 	
 	// onOpen and onSave
+	
+	private void onNew() {
+		// 
+		textPane.setText("");
+		
+		//currentFile = null;
+		currentFile = new File("Untitled.java"); 
+		textPane.setEditable(true);
+		frame.setTitle("Simple Java Editor - Untitled");
+		textPane.setEditable(true);
+		maybeHighlight();
+	}
 	
 	private void onOpen() {
         int result = fileChooser.showOpenDialog(frame);
@@ -190,6 +228,7 @@ public class Main {
             } catch (IOException ex) {
                 showError("Error opening file:\n" + ex.getMessage());
             }
+            textPane.setEditable(true);
             maybeHighlight();
         }
     }
