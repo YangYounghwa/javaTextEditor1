@@ -42,6 +42,8 @@ public class Main {
 		});
 		
 		JScrollPane scrollPane = new JScrollPane(textPane);
+		LineNumberView lineNumbers = new LineNumberView(textPane);
+		scrollPane.setRowHeaderView(lineNumbers);
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
 		
@@ -61,8 +63,30 @@ public class Main {
 		fileMenu.add(saveItem);
 		
 		
-		// - edit menu with Undo/Redo
+		// - edit menu 
 		JMenu editMenu = new JMenu("Edit");
+		
+		// Cut
+		JMenuItem cutItem = new JMenuItem("Cut");
+		cutItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X,InputEvent.CTRL_DOWN_MASK));
+		cutItem.addActionListener(e -> textPane.cut());
+		editMenu.add(cutItem);
+		
+		// Copy
+		JMenuItem copyItem = new JMenuItem("Copy");
+		copyItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK));
+		copyItem.addActionListener( e-> textPane.copy());
+		editMenu.add(copyItem);
+		
+		// Paste
+		JMenuItem pasteItem = new JMenuItem("Paste");
+		pasteItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK));
+		pasteItem.addActionListener(e -> textPane.paste());
+		editMenu.add(pasteItem);
+		
+		editMenu.addSeparator();
+		
+		// Undo/Redo
 		JMenuItem undoItem = new JMenuItem("Undo");
 		undoItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK));
 		undoItem.addActionListener( e -> onUndo());
