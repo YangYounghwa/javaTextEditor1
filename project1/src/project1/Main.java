@@ -2,16 +2,19 @@ package project1;
 //
 //asdfasdfasdfasdfasdf
 
-import javax.swing.*;
+import javax.swing.*;										// JFrame, JTextPane, JMenuBar ..
+import javax.swing.event.*;  //DocumentEvent, DocumentListener, UndoableEditListener, etc.
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.undo.CannotUndoException;
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.UndoManager;
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import javax.swing.text.*;  //StyleContext, Style, StyleConstants, AttributeSet, StyledDocument, BadLocationException
+import java.awt.*;   //color
+import java.awt.event.*;  // for KeyEvent, InputEvent, ActionEvent
+import java.io.*;  // File, IOException, BufferedReader/Writer
+import java.awt.Color;
 
 
 // My classes
@@ -22,6 +25,25 @@ public class Main {
 	private JFrame frame;
 	private JTextPane textPane;
 	private JFileChooser fileChooser;
+	private File currentFile;
+	
+	
+	private static final String[] JAVA_KEYWORDS = {
+			 "abstract","assert","boolean","break","byte","case","catch","char",
+			    "class","const","continue","default","do","double","else","enum",
+			    "extends","final","finally","float","for","goto","if","implements",
+			    "import","instanceof","int","interface","long","native","new",
+			    "package","private","protected","public","return","short","static",
+			    "strictfp","super","switch","synchronized","this","throw","throws",
+			    "transient","try","void","volatile","while"
+	};
+	
+	private final StyleContext styleContext = StyleContext.getDefaultStyleContext();
+	private final AttributeSet defaultStyle = styleContext.getStyle(StyleContext.DEFAULT_STYLE);
+	private final AttributeSet keywordStyle;
+	
+	
+	
 	
 	// 1) Add an UndoManager
 	private final UndoManager undoManager = new UndoManager();
@@ -29,10 +51,12 @@ public class Main {
 	public Main() {
 		frame = new JFrame("Simple Java Editor");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
 		frame.setSize(800,600);
 		
 		textPane =  new JTextPane();
+		
+		
 		// 2) Register the UndoManager on the document
 		textPane.getDocument().addUndoableEditListener(new UndoableEditListener(){
 			@Override
@@ -42,7 +66,9 @@ public class Main {
 		});
 		
 		JScrollPane scrollPane = new JScrollPane(textPane);
+		
 		LineNumberView lineNumbers = new LineNumberView(textPane);
+		
 		scrollPane.setRowHeaderView(lineNumbers);
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
@@ -86,7 +112,7 @@ public class Main {
 		
 		editMenu.addSeparator();
 		
-		// Undo/Redo
+		// Undo Redo
 		JMenuItem undoItem = new JMenuItem("Undo");
 		undoItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK));
 		undoItem.addActionListener( e -> onUndo());
@@ -133,6 +159,20 @@ public class Main {
 		});
 		
 		frame.setLocationRelativeTo(null);
+		
+		Style s = styleContext.addStyle("Keyword_Style",null);
+		StyleConstants.setForeground(s,Color.BLUE);
+		StyleConstants.setBold(s,true);
+		keywordStyle = styleContext.getStyle("Keyword_Style");
+		
+		textPane.getDocument().addDocumentListener(new DocumentListener(){
+			@Override public void insertUpdate(DocumentEvent e) { maybeHighlight();}
+			@Override public void removeUpdate(DocumentEvent e) { maybeHighlight();}
+			@Override public void changedUpdate(DocumentEvent e)  { /* ignore */ }
+		});
+		
+		
+		
 		frame.setVisible(true);
 	}
 	
@@ -141,19 +181,23 @@ public class Main {
 	private void onOpen() {
         int result = fileChooser.showOpenDialog(frame);
         if (result == JFileChooser.APPROVE_OPTION) {
+        	currentFile = fileChooser.getSelectedFile();
             File file = fileChooser.getSelectedFile();
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 textPane.read(reader, null);
                 frame.setTitle("Simple Java Editor – " + file.getName());
+                
             } catch (IOException ex) {
                 showError("Error opening file:\n" + ex.getMessage());
             }
+            maybeHighlight();
         }
     }
 
     private void onSave() {
         int result = fileChooser.showSaveDialog(frame);
         if (result == JFileChooser.APPROVE_OPTION) {
+        	currentFile = fileChooser.getSelectedFile();
             File file = fileChooser.getSelectedFile();
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                 textPane.write(writer);
@@ -161,6 +205,7 @@ public class Main {
             } catch (IOException ex) {
                 showError("Error saving file:\n" + ex.getMessage());
             }
+            maybeHighlight();
         }
     }	
 		
@@ -190,5 +235,42 @@ public class Main {
 	
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(Main::new);
+	}
+	
+	private void maybeHighlight() {
+		if (currentFile == null || !currentFile.getName().endsWith(".java")){
+			// clear all styles, restore default
+			StyledDocument doc = textPane.getStyledDocument();
+			doc.setCharacterAttributes(0, doc.getLength(), defaultStyle, true);
+			return;
+		}
+		
+		SwingUtilities.invokeLater( () -> {
+			StyledDocument doc = textPane.getStyledDocument();
+			String text;
+			try {
+				text = doc.getText(0, doc.getLength());
+			} catch (BadLocationException ex) {
+				return;
+				}
+			//1)reset to default
+			doc.setCharacterAttributes(0,text.length(),defaultStyle,true);
+			// 2) for each keyword, find and style
+			for (String kw : JAVA_KEYWORDS) {
+				int pos = 0;
+				while ((pos = text.indexOf(kw, pos)) >= 0){
+					//ensure it's a standalone word
+					boolean leftOK = pos == 0 || !Character.isJavaIdentifierPart(text.charAt(pos -1));
+					boolean rightOK = (pos+kw.length() == text.length())
+							|| !Character.isJavaIdentifierPart(text.charAt(pos+kw.length()));
+					if (leftOK && rightOK) {
+						doc.setCharacterAttributes(pos,kw.length(),keywordStyle,false);
+					}
+					pos += kw.length();
+				}
+			}
+		}
+		);
+		
 	}
 }
