@@ -74,19 +74,13 @@ public class Main {
 		});
 		
 		
-		Folding folding1 = new Folding(textPane);
+		folding1 = new Folding(textPane);
 		JScrollPane scrollPane = new JScrollPane(textPane);
 		scrollPane.setRowHeaderView(folding1);
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
 		
-		/*
-		lineNumberView = new LineNumberView(textPane);
-		JScrollPane scrollPane = new JScrollPane(textPane);
-		scrollPane.setRowHeaderView(lineNumberView);
 
-		frame.add(scrollPane, BorderLayout.CENTER);
-		*/
 		
 		fileChooser = new JFileChooser();
 		fileChooser.setFileFilter(new FileNameExtensionFilter("Text Files","txt","text"));
