@@ -31,6 +31,7 @@ public class Folding extends JComponent
 
 		tp.addCaretListener(this);
 		tp.addPropertyChangeListener("font", this);
+		tp.getDocument().addDocumentListener(this); // ✅ listen for edits
 
 		JScrollPane sp = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, tp);
 		if (sp != null) sp.getVerticalScrollBar().addAdjustmentListener(this);
@@ -114,13 +115,26 @@ public class Folding extends JComponent
 		if (end <= start) return;
 
 		String block = doc.getText(start, end - start + 1);
+
+		// ✅ Move caret out of folding region
+		int caret = textPane.getCaretPosition();
+		if (caret >= start && caret <= end) {
+			textPane.setCaretPosition(start -1);
+		}
+
 		foldedBlocks.put(start, block);
+
 		doc.remove(start, block.length());
 		doc.insertString(start, PLACEHOLDER, null);
 	}
 
 	private void unfoldBlock(int start) {
 		try {
+			int caret = textPane.getCaretPosition();
+			if (caret >= start && caret < start + PLACEHOLDER.length()) {
+				textPane.setCaretPosition(start);
+			}
+
 			Document doc = textPane.getDocument();
 			String block = foldedBlocks.remove(start);
 			if (block == null) return;
