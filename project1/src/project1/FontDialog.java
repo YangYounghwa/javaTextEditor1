@@ -6,16 +6,17 @@ import java.awt.event.*;
 import java.awt.GraphicsEnvironment;
 
 
+
 public class FontDialog extends JDialog {
 	private final JTextPane textPane;
-	private final LineNumberView lineNumberView;
 	private final JList<String> fontList;
 	private final JList<Integer> sizeList;
+	private final Folding folding;
 	
-	public FontDialog(JFrame owner, JTextPane textPane, LineNumberView lineNumberView){
+	public FontDialog(JFrame owner, JTextPane textPane, Folding folding){
 		super(owner, "Choose Font", true);
 		this.textPane = textPane;
-		this.lineNumberView = lineNumberView;
+		this.folding = folding;
 		
 		// Font families
 		String[] fonts = 
@@ -60,7 +61,7 @@ public class FontDialog extends JDialog {
 		if (family != null && size != null) {
 			Font f= new Font(family, Font.PLAIN, size);
 			textPane.setFont(f);
-			lineNumberView.setFont(f);
+			folding.setFont(f);
 		}
 		dispose();
 	}

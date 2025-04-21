@@ -16,20 +16,25 @@ import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
 import java.io.File;
+import javax.swing.Timer;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 
 // My classes
 import project1.FindReplaceDialog;
 import project1.FontDialog;
+import project1.Folding;
 
 public class Main {
 	private JFrame frame;
 	private JTextPane textPane;
 	private JFileChooser fileChooser;
 	private File currentFile;
+	private Folding folding1;
 	
-	private LineNumberView lineNumberView;
-	
+	private Timer autoSaveTimer;
+
 	
 	private static final String[] JAVA_KEYWORDS = {
 			 "abstract","assert","boolean","break","byte","case","catch","char",
@@ -69,12 +74,19 @@ public class Main {
 		});
 		
 		
+		Folding folding1 = new Folding(textPane);
+		JScrollPane scrollPane = new JScrollPane(textPane);
+		scrollPane.setRowHeaderView(folding1);
+		frame.add(scrollPane, BorderLayout.CENTER);
+		
+		
+		/*
 		lineNumberView = new LineNumberView(textPane);
 		JScrollPane scrollPane = new JScrollPane(textPane);
 		scrollPane.setRowHeaderView(lineNumberView);
 
 		frame.add(scrollPane, BorderLayout.CENTER);
-		
+		*/
 		
 		fileChooser = new JFileChooser();
 		fileChooser.setFileFilter(new FileNameExtensionFilter("Text Files","txt","text"));
@@ -142,12 +154,24 @@ public class Main {
 		
 		JMenu formatMenu = new JMenu("Format");
 		JMenuItem fontItem = new JMenuItem("Font...");
+		
+		fontItem.setAccelerator(
+				KeyStroke.getKeyStroke(KeyEvent.VK_F,
+						InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)
+				);
+		
+		fontItem.addActionListener(e ->
+			new FontDialog(frame, textPane, folding1).setVisible(true)
+			);
+		
+		/*
 		fontItem.setAccelerator(
 				KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)
 				);
 		fontItem.addActionListener( e ->
 			new FontDialog(frame, textPane, lineNumberView).setVisible(true)
 		);
+		*/
 		
 		formatMenu.add(fontItem);
 		menuBar.add(formatMenu);
@@ -199,6 +223,16 @@ public class Main {
 		
 		
 		onNew();
+		
+		autoSaveTimer = new Timer(60_000, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				autoSave();
+			}
+		});
+		autoSaveTimer.setRepeats(true);
+		autoSaveTimer.start();
+		
 		frame.setVisible(true);
 	}
 	
@@ -274,6 +308,16 @@ public class Main {
 	
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(Main::new);
+	}
+	
+	private void autoSave() {
+		if (currentFile != null) {
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(currentFile))) {
+				textPane.write(writer);
+			} catch (IOException ex) {
+				System.err.println("Autosave failed: " + ex.getMessage());
+			}
+		}
 	}
 	
 	private void maybeHighlight() {
