@@ -14,7 +14,7 @@ public class Folding extends JComponent
 	implements MouseListener, CaretListener, DocumentListener, PropertyChangeListener,
 	AdjustmentListener {
 
-	private static final String PLACEHOLDER = "...";
+	private static final String PLACEHOLDER = "{...}";
 	private static final int MARGIN = 4;
 
 	private final JTextPane textPane;
@@ -116,12 +116,27 @@ public class Folding extends JComponent
 
 		String block = doc.getText(start, end - start + 1);
 
-		// ✅ Move caret out of folding region
-		int caret = textPane.getCaretPosition();
-		if (caret >= start && caret <= end) {
-			textPane.setCaretPosition(start -1);
+		int caretDot = textPane.getCaret().getDot();
+		int caretMark = textPane.getCaret().getMark();
+		
+		
+		Element root = doc.getDefaultRootElement();
+		int startLine = root.getElementIndex(start);
+		int endLine = root.getElementIndex(end);
+		int dotLine = root.getElementIndex(caretDot);
+		int markLine = root.getElementIndex(caretMark);
+		
+		if ((dotLine >= startLine && dotLine <= endLine) ||
+				(markLine >= startLine && markLine <= endLine) ||
+				( dotLine <= startLine && markLine >= endLine))
+				{
+			textPane.setCaretPosition(start-1);
 		}
+		
+	
 
+		
+		
 		foldedBlocks.put(start, block);
 
 		doc.remove(start, block.length());
@@ -130,10 +145,15 @@ public class Folding extends JComponent
 
 	private void unfoldBlock(int start) {
 		try {
-			int caret = textPane.getCaretPosition();
-			if (caret >= start && caret < start + PLACEHOLDER.length()) {
+			int caretDot  = textPane.getCaret().getDot();
+			int caretMark = textPane.getCaret().getMark();
+
+			if (( caretDot >=  start && caretDot < start + PLACEHOLDER.length()) ||
+					(caretMark >= start && caretMark < start + PLACEHOLDER.length())) {
 				textPane.setCaretPosition(start);
 			}
+			
+		
 
 			Document doc = textPane.getDocument();
 			String block = foldedBlocks.remove(start);
